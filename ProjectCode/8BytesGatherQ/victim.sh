@@ -1,0 +1,1 @@
+make vic && timeout -s2 123123 taskset -c 0 ./victim 0

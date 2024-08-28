@@ -1,0 +1,1 @@
+timeout -s2 3600s taskset -c 0 ./victim 

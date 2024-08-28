@@ -1,0 +1,1 @@
+make clean && make && taskset -c 1 timeout -s2 30 ./attack

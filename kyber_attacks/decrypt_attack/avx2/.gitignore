@@ -1,0 +1,9 @@
+*.so
+*.o
+victim
+PQCgenKAT_kem512
+PQCgenKAT_kem768
+PQCgenKAT_kem1024
+PQCgenKAT_kem512-90s
+PQCgenKAT_kem768-90s
+PQCgenKAT_kem1024-90s
